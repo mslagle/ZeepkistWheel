@@ -1,0 +1,3 @@
+- v17 support
+- rumble intensity based on friction
+- rumble on slippery surfaces

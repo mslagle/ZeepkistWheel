@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Zeepkist.Wheel</AssemblyName>
+    <Description>Zeepkist Rumble</Description>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RootNamespace>Zeepkist.Wheel</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="Zeepkist.GameLibs" Version="17.1.1762" />
+    <PackageReference Include="ZeepSDK" Version="1.43.0" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="SDL3.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <Target Name="CopyToZeepkist" AfterTargets="Build" Condition=" '$(Configuration)' == 'Debug'">
+    <Message Text="Creating mono debug edition of plugin" Importance="high" />
+    <Exec Command="&quot;C:\Program Files\Unity 2021.3.10f1\Editor\Data\MonoBleedingEdge\bin\mono.exe&quot; &quot;C:\Program Files\Unity 2021.3.10f1\Editor\Data\MonoBleedingEdge\lib\mono\4.5\pdb2mdb.exe&quot; $(ProjectName).dll" WorkingDirectory="$(TargetDir)" />
+
+    <ItemGroup>
+      <OutputFiles Include="$(TargetDir)$(ProjectName).*;$(TargetDir)SDL3*.dll;$(TargetDir)**\*.mp3;$(TargetDir)**\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="%(OutputFiles.Fullpath)" DestinationFolder="M:\SteamLibrary\steamapps\common\Zeepkist\BepInEx\plugins\wheel" />
+  </Target>
+
+  <Target Name="CreatePackage" AfterTargets="Build" Condition=" '$(Configuration)' == 'Release'">
+    <Message Text="Packaging Plugin" Importance="high" />
+    <ItemGroup>
+      <OutputFiles Include="$(TargetDir)$(ProjectName).*;$(TargetDir)Microsoft*.dll;$(TargetDir)**\*.mp3;$(TargetDir)**\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="%(OutputFiles.Fullpath)" DestinationFolder="$(TargetDir)\package" />
+  </Target>
+</Project>
