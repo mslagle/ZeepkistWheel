@@ -1,6 +1,7 @@
 ﻿// SDL3ForceFeedback.cs - Complete Force Feedback Library
 // Place SDL3.dll in your output directory
 
+using BepInEx.Logging;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -18,6 +19,8 @@ namespace Zeepkist.Wheel
         private const uint SDL_HAPTIC_FRICTION = (1u << 10);
         private const uint SDL_HAPTIC_AUTOCENTER = (1u << 17);
         private const uint SDL_HAPTIC_INFINITY = 0xFFFFFFFF;
+
+        private ManualLogSource logger = Logger.CreateLogSource("SDL3ForceFeedback");
 
         [StructLayout(LayoutKind.Sequential)]
         private struct SDL_HapticDirection
@@ -132,18 +135,67 @@ namespace Zeepkist.Wheel
         public bool IsInitialized => haptic != IntPtr.Zero;
         public string DeviceName { get; private set; } = "";
 
-        public bool Initialize(int deviceIndex = 0)
+        public bool Initialize(int deviceIndex = -1)
         {
             if (!SDL_Init(0x00000200 | 0x00001000)) return false;
 
             int count;
             IntPtr joysticksPtr = SDL_GetJoysticks(out count);
-            if (count == 0 || deviceIndex >= count) return false;
+            if (count == 0) return false;
 
             uint[] joystickIds = new uint[count];
             Marshal.Copy(joysticksPtr, (int[])(object)joystickIds, 0, count);
 
-            joystick = SDL_OpenJoystick(joystickIds[deviceIndex]);
+            // If specific device requested, use it
+            if (deviceIndex >= 0 && deviceIndex < count)
+            {
+                return InitializeDevice(joystickIds[deviceIndex]);
+            }
+
+            // Auto-detect: Try to find a device with force feedback
+            logger.LogInfo($"Found {count} device(s), searching for steering wheel...");
+
+            for (int i = 0; i < count; i++)
+            {
+                IntPtr testJoy = SDL_OpenJoystick(joystickIds[i]);
+                if (testJoy == IntPtr.Zero) continue;
+
+                string name = Marshal.PtrToStringAnsi(SDL_GetJoystickName(testJoy)) ?? "Unknown";
+                logger.LogInfo($"  [{i}] {name}");
+
+                // Check if it has haptic support
+                IntPtr testHaptic = SDL_OpenHapticFromJoystick(testJoy);
+                if (testHaptic != IntPtr.Zero)
+                {
+                    uint features = SDL_GetHapticFeatures(testHaptic);
+
+                    // Check if it supports force feedback effects (not just rumble)
+                    bool hasForceFeeback = (features & (SDL_HAPTIC_CONSTANT | SDL_HAPTIC_SPRING | SDL_HAPTIC_DAMPER)) != 0;
+
+                    if (hasForceFeeback)
+                    {
+                        // Found a device with force feedback - keep it
+                        logger.LogInfo($"  ✓ Selected: {name} (has force feedback)");
+                        joystick = testJoy;
+                        haptic = testHaptic;
+                        DeviceName = name;
+                        return true;
+                    }
+
+                    SDL_CloseHaptic(testHaptic);
+                }
+
+                SDL_CloseJoystick(testJoy);
+            }
+
+            // No force feedback device found, fall back to first device
+            logger.LogInfo("  No force feedback device found, using first available...");
+            return InitializeDevice(joystickIds[0]);
+        }
+
+        private bool InitializeDevice(uint joystickId)
+        {
+            joystick = SDL_OpenJoystick(joystickId);
             if (joystick == IntPtr.Zero) return false;
 
             DeviceName = Marshal.PtrToStringAnsi(SDL_GetJoystickName(joystick)) ?? "Unknown";
@@ -161,6 +213,40 @@ namespace Zeepkist.Wheel
         public uint GetSupportedFeatures()
         {
             return haptic == IntPtr.Zero ? 0 : SDL_GetHapticFeatures(haptic);
+        }
+
+        public string[] GetSupportedFeatureNames()
+        {
+            if (haptic == IntPtr.Zero) return new string[0];
+
+            uint features = SDL_GetHapticFeatures(haptic);
+            var featureList = new System.Collections.Generic.List<string>();
+
+            if ((features & SDL_HAPTIC_CONSTANT) != 0) featureList.Add("Constant Force");
+            if ((features & SDL_HAPTIC_SINE) != 0) featureList.Add("Sine Wave");
+            if ((features & (1u << 2)) != 0) featureList.Add("Square Wave");
+            if ((features & (1u << 3)) != 0) featureList.Add("Triangle Wave");
+            if ((features & (1u << 4)) != 0) featureList.Add("Sawtooth Up");
+            if ((features & (1u << 5)) != 0) featureList.Add("Sawtooth Down");
+            if ((features & (1u << 6)) != 0) featureList.Add("Ramp");
+            if ((features & SDL_HAPTIC_SPRING) != 0) featureList.Add("Spring");
+            if ((features & SDL_HAPTIC_DAMPER) != 0) featureList.Add("Damper");
+            if ((features & (1u << 9)) != 0) featureList.Add("Inertia");
+            if ((features & SDL_HAPTIC_FRICTION) != 0) featureList.Add("Friction");
+            if ((features & (1u << 11)) != 0) featureList.Add("Left/Right");
+            if ((features & (1u << 15)) != 0) featureList.Add("Custom");
+            if ((features & (1u << 16)) != 0) featureList.Add("Gain");
+            if ((features & SDL_HAPTIC_AUTOCENTER) != 0) featureList.Add("Autocenter");
+            if ((features & (1u << 18)) != 0) featureList.Add("Status");
+            if ((features & (1u << 19)) != 0) featureList.Add("Pause");
+
+            return featureList.ToArray();
+        }
+
+        public string GetFeaturesString()
+        {
+            var features = GetSupportedFeatureNames();
+            return features.Length > 0 ? string.Join(", ", features) : "None";
         }
 
         public bool PlayConstantForce(short magnitude, uint duration = 1000)

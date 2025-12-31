@@ -85,6 +85,14 @@ namespace Zeepkist.Wheel
             RacingApi.PassedCheckpoint += RacingApi_PassedCheckpoint;
             RacingApi.WheelBroken += RacingApi_WheelBroken;
             RacingApi.CrossedFinishLine += RacingApi_CrossedFinishLine;
+            RacingApi.LevelLoaded += () =>
+            {
+                if (!isInitalized)
+                {
+                    Logger.LogInfo($"Level loaded, initializing wheel force feedback");
+                    InitalizeWheel();
+                }
+            };
 
             RacingApi.Quit += () =>
             {
@@ -250,19 +258,19 @@ namespace Zeepkist.Wheel
             }
 
             isInitalized = true;
-            Logger.LogInfo("Force feedback initialized successfully.");
+            Logger.LogInfo($"Force feedback initialized successfully.");
             PlayerManager.Instance.messenger.Log("Force feedback wheel found and initialized!", 2.0f);
 
             Logger.LogInfo($"Initialized: {forceFeedback.DeviceName}");
-            Logger.LogInfo($"Supported features: 0x{forceFeedback.GetSupportedFeatures():X}\n");
+            Logger.LogInfo($"Supported features: {String.Join(',', forceFeedback.GetSupportedFeatureNames())}");
 
             forceFeedback.SetGain(Gain.Value);
-            forceFeedback.SetAutocenter(20);
+            //forceFeedback.SetAutocenter(20);
         }
 
         private void RacingApi_WheelBroken()
         {
-            if (EnableWheel.Value)
+            if (EnableWheel.Value && isInitalized)
             {
                 if (EnableReason.Value)
                 {
@@ -275,7 +283,7 @@ namespace Zeepkist.Wheel
 
         private void RacingApi_PassedCheckpoint(float time)
         {
-            if (EnableCheckpoint.Value)
+            if (EnableCheckpoint.Value && isInitalized)
             {
                 if (EnableReason.Value)
                 {
@@ -292,7 +300,7 @@ namespace Zeepkist.Wheel
             isDead = false;
             Logger.LogInfo($"Detected a player spawn, setting isDead = false and isFirstPerson = false, player car = {playerCar}");
 
-            if (EnableSpawn.Value)
+            if (EnableSpawn.Value && isInitalized)
             {
                 if (EnableReason.Value)
                 {
@@ -308,7 +316,7 @@ namespace Zeepkist.Wheel
             isDead = true;
             Logger.LogInfo($"Detected a crash, setting isDead = true");
 
-            if (EnableCrash.Value)
+            if (EnableCrash.Value && isInitalized)
             {
                 if (EnableReason.Value)
                 {
@@ -323,7 +331,7 @@ namespace Zeepkist.Wheel
             isDead = true;
             Logger.LogInfo($"Crossed Finish line {time}, setting isDead = true");
 
-            if (EnableCrash.Value)
+            if (EnableCrash.Value && isInitalized)
             {
                 if (EnableReason.Value)
                 {
