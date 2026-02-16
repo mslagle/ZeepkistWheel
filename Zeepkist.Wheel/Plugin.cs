@@ -296,6 +296,8 @@ namespace Zeepkist.Wheel
 
         private void RacingApi_PlayerSpawned()
         {
+            forceFeedback?.StopAllEffects();
+
             playerCar = PlayerManager.Instance.currentMaster.carSetups.First().cc;
             isDead = false;
             Logger.LogInfo($"Detected a player spawn, setting isDead = false and isFirstPerson = false, player car = {playerCar}");
@@ -313,6 +315,8 @@ namespace Zeepkist.Wheel
 
         private void RacingApi_Crashed(CrashReason reason)
         {
+            forceFeedback?.StopAllEffects();
+
             isDead = true;
             Logger.LogInfo($"Detected a crash, setting isDead = true");
 
@@ -328,6 +332,8 @@ namespace Zeepkist.Wheel
 
         private void RacingApi_CrossedFinishLine(float time)
         {
+            forceFeedback?.StopAllEffects();
+
             isDead = true;
             Logger.LogInfo($"Crossed Finish line {time}, setting isDead = true");
 

@@ -292,10 +292,20 @@ namespace Zeepkist.Wheel
                     type = (ushort)SDL_HAPTIC_SPRING,
                     length = SDL_HAPTIC_INFINITY,
                     right_sat0 = 0xFFFF,
+                    right_sat1 = 0xFFFF,
+                    right_sat2 = 0xFFFF,
                     left_sat0 = 0xFFFF,
+                    left_sat1 = 0xFFFF,
+                    left_sat2 = 0xFFFF,
                     right_coeff0 = coefficient,
+                    right_coeff1 = coefficient,
+                    right_coeff2 = coefficient,
                     left_coeff0 = coefficient,
-                    center0 = center
+                    left_coeff1 = coefficient,
+                    left_coeff2 = coefficient,
+                    center0 = center,
+                    center1 = center,
+                    center2 = center
                 }
             };
 
@@ -333,9 +343,17 @@ namespace Zeepkist.Wheel
                     type = (ushort)SDL_HAPTIC_DAMPER,
                     length = SDL_HAPTIC_INFINITY,
                     right_sat0 = 0xFFFF,
+                    right_sat1 = 0xFFFF,
+                    right_sat2 = 0xFFFF,
                     left_sat0 = 0xFFFF,
+                    left_sat1 = 0xFFFF,
+                    left_sat2 = 0xFFFF,
                     right_coeff0 = coefficient,
-                    left_coeff0 = coefficient
+                    right_coeff1 = coefficient,
+                    right_coeff2 = coefficient,
+                    left_coeff0 = coefficient,
+                    left_coeff1 = coefficient,
+                    left_coeff2 = coefficient
                 }
             };
 
@@ -396,9 +414,17 @@ namespace Zeepkist.Wheel
                     type = (ushort)SDL_HAPTIC_FRICTION,
                     length = SDL_HAPTIC_INFINITY,
                     right_sat0 = 0xFFFF,
+                    right_sat1 = 0xFFFF,
+                    right_sat2 = 0xFFFF,
                     left_sat0 = 0xFFFF,
+                    left_sat1 = 0xFFFF,
+                    left_sat2 = 0xFFFF,
                     right_coeff0 = coefficient,
-                    left_coeff0 = coefficient
+                    right_coeff1 = coefficient,
+                    right_coeff2 = coefficient,
+                    left_coeff0 = coefficient,
+                    left_coeff1 = coefficient,
+                    left_coeff2 = coefficient
                 }
             };
 
@@ -463,11 +489,36 @@ namespace Zeepkist.Wheel
 
         public void StopAllEffects()
         {
-            if (constantEffectId >= 0) SDL_StopHapticEffect(haptic, constantEffectId);
-            if (springEffectId >= 0) SDL_StopHapticEffect(haptic, springEffectId);
-            if (dampingEffectId >= 0) SDL_StopHapticEffect(haptic, dampingEffectId);
-            if (frictionEffectId >= 0) SDL_StopHapticEffect(haptic, frictionEffectId);
-            if (sineEffectId >= 0) SDL_StopHapticEffect(haptic, sineEffectId);
+            if (constantEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, constantEffectId);
+                SDL_DestroyHapticEffect(haptic, constantEffectId);
+                constantEffectId = -1;
+            }
+            if (springEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, springEffectId);
+                SDL_DestroyHapticEffect(haptic, springEffectId);
+                springEffectId = -1;
+            }
+            if (dampingEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, dampingEffectId);
+                SDL_DestroyHapticEffect(haptic, dampingEffectId);
+                dampingEffectId = -1;
+            }
+            if (frictionEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, frictionEffectId);
+                SDL_DestroyHapticEffect(haptic, frictionEffectId);
+                frictionEffectId = -1;
+            }
+            if (sineEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, sineEffectId);
+                SDL_DestroyHapticEffect(haptic, sineEffectId);
+                sineEffectId = -1;
+            }
         }
 
         public bool SetAutocenter(int percentage) => haptic != IntPtr.Zero && SDL_SetHapticAutocenter(haptic, percentage);
