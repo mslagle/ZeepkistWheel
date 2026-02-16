@@ -36,7 +36,7 @@ namespace Zeepkist.Wheel
         static New_ControlCar playerCar = null;
 
         private float updateTimer = 0.0f;
-        private const float updateInterval = 0.1f; // 100 milliseconds
+        private const float updateInterval = 0.05f; // 50 milliseconds
 
         // States
         static bool isDead { get; set; }
@@ -174,7 +174,7 @@ namespace Zeepkist.Wheel
             if (EnableCentering.Value)
             {
                 var frontWheelsOnGround = playerCar.wheels.All(x => x.IsGrounded());
-                Logger.LogInfo($"Front wheels on ground: {frontWheelsOnGround}");
+                //Logger.LogInfo($"Front wheels on ground: {frontWheelsOnGround}");
                 if (frontWheelsOnGround)
                 {
                     // Get a surface normal from one of the front wheels
@@ -183,7 +183,7 @@ namespace Zeepkist.Wheel
 
                     // Adjust the centering strength based on speed and surface friction
                     float speedFactor = (playerCar.GetLocalVelocity().magnitude > 50 ? 50 : playerCar.localVelocity.magnitude) / 50; // Normalize speed factor (0 to 1)
-                    short centeringStrength = (short)Math.Round(friction * speedFactor * 20000);
+                    short centeringStrength = (short)Math.Round(friction * speedFactor * 10000);
 
                     if (centeringStrength > 15000)
                     {
@@ -213,7 +213,7 @@ namespace Zeepkist.Wheel
                     float maxMudValue = Math.Abs(1.1f - (playerCar.localVelocity.magnitude > 50 ? 50 : playerCar.localVelocity.magnitude) / 50f);
                     short dampingValue = (short)Math.Round(maxMudValue * 32000);
 
-                    Logger.LogInfo($"Adding damping due to mud with mud value {maxMudValue} and damping {dampingValue}");
+                    //Logger.LogInfo($"Adding damping due to mud with mud value {maxMudValue} and damping {dampingValue}");
                     forceFeedback.UpdateDampingEffect(dampingValue);
                 } else
                 {
@@ -222,23 +222,24 @@ namespace Zeepkist.Wheel
             }   
 
 
-            // Only run the following in 3rd person so 1st person doesnt get advantage
-            if (EnableTireSmoke.Value && false)
+            // Play the shake effect when tires smoke
+            // Shake will be more intense on surfaces with higher friction
+            if (EnableTireSmoke.Value)
             {
                 // Detect when wheels are slipping
                 var wheelLocked = playerCar.wheels.FirstOrDefault(x => x.IsGrounded() && x.IsSlipping());
                 if (wheelLocked != null)
                 {
-                    float rumbleIntensity = wheelLocked.GetCurrentSurface().physics.frictionFront / 1.5f;
+                    float rumbleIntensity = wheelLocked.GetCurrentSurface().physics.frictionFront;
                     if (rumbleIntensity >= 0.0001f)
                     {
-                        Logger.LogInfo($"Detected a wheel slipping on a hard surface {wheelLocked.name} on {wheelLocked.GetCurrentSurface().name} with {wheelLocked.GetCurrentSurface().physics.frictionFront} with rumble intensity = {rumbleIntensity}");
+                        //Logger.LogInfo($"Detected a wheel slipping on a hard surface {wheelLocked.name} on {wheelLocked.GetCurrentSurface().name} with {wheelLocked.GetCurrentSurface().physics.frictionFront} with rumble intensity = {rumbleIntensity}");
 
                         if (EnableReason.Value)
                         {
                             PlayerManager.Instance.messenger.Log("Force feedback - Wheel smoke", 1.0f);
                         }
-                        forceFeedback.PlayRumble(50, rumbleIntensity, 25);
+                        forceFeedback.PlayShake(20, rumbleIntensity * 5f, 10);
                     }
 
                 }

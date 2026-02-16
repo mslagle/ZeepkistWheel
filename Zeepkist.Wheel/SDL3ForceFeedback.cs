@@ -133,7 +133,9 @@ namespace Zeepkist.Wheel
         private int dampingEffectId = -1;
         private int frictionEffectId = -1;
         private int sineEffectId = -1;
+        private int shakeEffectId = -1;
         private CancellationTokenSource rumbleCancellation = null;
+        private CancellationTokenSource shakeCancellation = null;
 
         public bool IsInitialized => haptic != IntPtr.Zero;
         public string DeviceName { get; private set; } = "";
@@ -481,6 +483,55 @@ namespace Zeepkist.Wheel
             return false;
         }
 
+        public bool PlayShake(uint durationMs, float intensity = 0.75f, ushort frequency = 100)
+        {
+            if (haptic == IntPtr.Zero) return false;
+
+            if (shakeCancellation != null)
+            {
+                shakeCancellation.Cancel();
+                shakeCancellation.Dispose();
+                shakeCancellation = null;
+            }
+
+            intensity = Math.Max(0.0f, Math.Min(1.0f, intensity));
+            short magnitude = (short)(intensity * 32767);
+
+            if (shakeEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, shakeEffectId);
+                SDL_DestroyHapticEffect(haptic, shakeEffectId);
+                shakeEffectId = -1;
+            }
+
+            var effect = new SDL_HapticEffect
+            {
+                type = (ushort)SDL_HAPTIC_SINE,
+                periodic = new SDL_HapticPeriodic
+                {
+                    type = (ushort)SDL_HAPTIC_SINE,
+                    length = SDL_HAPTIC_INFINITY,
+                    period = frequency,
+                    magnitude = magnitude,
+                    attack_length = 10,
+                    fade_length = 10
+                }
+            };
+
+            shakeEffectId = SDL_CreateHapticEffect(haptic, ref effect);
+            if (shakeEffectId >= 0 && SDL_RunHapticEffect(haptic, shakeEffectId, 1))
+            {
+                shakeCancellation = new CancellationTokenSource();
+                Task.Delay((int)durationMs, shakeCancellation.Token).ContinueWith(t =>
+                {
+                    if (!t.IsCanceled && shakeEffectId >= 0)
+                        SDL_StopHapticEffect(haptic, shakeEffectId);
+                }, TaskScheduler.Default);
+                return true;
+            }
+            return false;
+        }
+
         public void RumbleLight(uint durationMs = 200) => PlayRumble(durationMs, 0.3f, 150);
         public void RumbleMedium(uint durationMs = 300) => PlayRumble(durationMs, 0.6f, 100);
         public void RumbleHeavy(uint durationMs = 500) => PlayRumble(durationMs, 0.9f, 60);
@@ -519,6 +570,12 @@ namespace Zeepkist.Wheel
                 SDL_DestroyHapticEffect(haptic, sineEffectId);
                 sineEffectId = -1;
             }
+            if (shakeEffectId >= 0)
+            {
+                SDL_StopHapticEffect(haptic, shakeEffectId);
+                SDL_DestroyHapticEffect(haptic, shakeEffectId);
+                shakeEffectId = -1;
+            }
         }
 
         public bool SetAutocenter(int percentage) => haptic != IntPtr.Zero && SDL_SetHapticAutocenter(haptic, percentage);
@@ -546,12 +603,18 @@ namespace Zeepkist.Wheel
                 rumbleCancellation.Cancel();
                 rumbleCancellation.Dispose();
             }
+            if (shakeCancellation != null)
+            {
+                shakeCancellation.Cancel();
+                shakeCancellation.Dispose();
+            }
 
             if (constantEffectId >= 0) SDL_DestroyHapticEffect(haptic, constantEffectId);
             if (springEffectId >= 0) SDL_DestroyHapticEffect(haptic, springEffectId);
             if (dampingEffectId >= 0) SDL_DestroyHapticEffect(haptic, dampingEffectId);
             if (frictionEffectId >= 0) SDL_DestroyHapticEffect(haptic, frictionEffectId);
             if (sineEffectId >= 0) SDL_DestroyHapticEffect(haptic, sineEffectId);
+            if (shakeEffectId >= 0) SDL_DestroyHapticEffect(haptic, shakeEffectId);
 
             if (haptic != IntPtr.Zero) SDL_CloseHaptic(haptic);
             if (joystick != IntPtr.Zero) SDL_CloseJoystick(joystick);
