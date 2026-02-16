@@ -214,10 +214,10 @@ namespace Zeepkist.Wheel
                     short dampingValue = (short)Math.Round(maxMudValue * 32000);
 
                     Logger.LogInfo($"Adding damping due to mud with mud value {maxMudValue} and damping {dampingValue}");
-                    forceFeedback.PlayDampingEffect(dampingValue);
+                    forceFeedback.UpdateDampingEffect(dampingValue);
                 } else
                 {
-                    forceFeedback.PlayDampingEffect(0);
+                    forceFeedback.UpdateDampingEffect(0);
                 }
             }   
 

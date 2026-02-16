@@ -123,6 +123,9 @@ namespace Zeepkist.Wheel
         [DllImport(SDL_LIB, CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr SDL_GetError();
 
+        [DllImport(SDL_LIB, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool SDL_UpdateHapticEffect(IntPtr haptic, int effect, ref SDL_HapticEffect data);
+
         private IntPtr joystick = IntPtr.Zero;
         private IntPtr haptic = IntPtr.Zero;
         private int constantEffectId = -1;
@@ -277,46 +280,10 @@ namespace Zeepkist.Wheel
             return constantEffectId >= 0 && SDL_RunHapticEffect(haptic, constantEffectId, 1);
         }
 
-        public bool PlaySpringEffect(short coefficient = 10000, short center = 0)
-        {
-            if (haptic == IntPtr.Zero) return false;
-
-            if (springEffectId >= 0)
-            {
-                SDL_StopHapticEffect(haptic, springEffectId);
-                SDL_DestroyHapticEffect(haptic, springEffectId);
-                springEffectId = -1;
-            }
-
-            var effect = new SDL_HapticEffect
-            {
-                type = (ushort)SDL_HAPTIC_SPRING,
-                condition = new SDL_HapticCondition
-                {
-                    type = (ushort)SDL_HAPTIC_SPRING,
-                    length = SDL_HAPTIC_INFINITY,
-                    right_sat0 = 0xFFFF,
-                    left_sat0 = 0xFFFF,
-                    right_coeff0 = coefficient,
-                    left_coeff0 = coefficient,
-                    center0 = center
-                }
-            };
-
-            springEffectId = SDL_CreateHapticEffect(haptic, ref effect);
-            return springEffectId >= 0 && SDL_RunHapticEffect(haptic, springEffectId, 1);
-        }
-
         public bool UpdateSpringEffect(short coefficient, short center = 0)
         {
             if (haptic == IntPtr.Zero) return false;
 
-            if (springEffectId >= 0)
-            {
-                SDL_StopHapticEffect(haptic, springEffectId);
-                SDL_DestroyHapticEffect(haptic, springEffectId);
-            }
-
             var effect = new SDL_HapticEffect
             {
                 type = (ushort)SDL_HAPTIC_SPRING,
@@ -332,8 +299,18 @@ namespace Zeepkist.Wheel
                 }
             };
 
-            springEffectId = SDL_CreateHapticEffect(haptic, ref effect);
-            return springEffectId >= 0 && SDL_RunHapticEffect(haptic, springEffectId, 1);
+            if (springEffectId < 0)
+            {
+                // Create the effect if it doesn't exist
+                springEffectId = SDL_CreateHapticEffect(haptic, ref effect);
+                if (springEffectId < 0) return false;
+                return SDL_RunHapticEffect(haptic, springEffectId, 1);
+            }
+            else
+            {
+                // Update the existing effect
+                return SDL_UpdateHapticEffect(haptic, springEffectId, ref effect);
+            }
         }
 
         public short CalculateSpringFromSpeed(float speedKmh, float minSpeed = 0f, float maxSpeed = 200f)
@@ -344,45 +321,10 @@ namespace Zeepkist.Wheel
             return (short)(maxCoeff - (normalized * (maxCoeff - minCoeff)));
         }
 
-        public bool PlayDampingEffect(short coefficient = 5000)
-        {
-            if (haptic == IntPtr.Zero) return false;
-
-            if (dampingEffectId >= 0)
-            {
-                SDL_StopHapticEffect(haptic, dampingEffectId);
-                SDL_DestroyHapticEffect(haptic, dampingEffectId);
-                dampingEffectId = -1;
-            }
-
-            var effect = new SDL_HapticEffect
-            {
-                type = (ushort)SDL_HAPTIC_DAMPER,
-                condition = new SDL_HapticCondition
-                {
-                    type = (ushort)SDL_HAPTIC_DAMPER,
-                    length = SDL_HAPTIC_INFINITY,
-                    right_sat0 = 0xFFFF,
-                    left_sat0 = 0xFFFF,
-                    right_coeff0 = coefficient,
-                    left_coeff0 = coefficient
-                }
-            };
-
-            dampingEffectId = SDL_CreateHapticEffect(haptic, ref effect);
-            return dampingEffectId >= 0 && SDL_RunHapticEffect(haptic, dampingEffectId, 1);
-        }
-
         public bool UpdateDampingEffect(short coefficient)
         {
             if (haptic == IntPtr.Zero) return false;
 
-            if (dampingEffectId >= 0)
-            {
-                SDL_StopHapticEffect(haptic, dampingEffectId);
-                SDL_DestroyHapticEffect(haptic, dampingEffectId);
-            }
-
             var effect = new SDL_HapticEffect
             {
                 type = (ushort)SDL_HAPTIC_DAMPER,
@@ -397,8 +339,18 @@ namespace Zeepkist.Wheel
                 }
             };
 
-            dampingEffectId = SDL_CreateHapticEffect(haptic, ref effect);
-            return dampingEffectId >= 0 && SDL_RunHapticEffect(haptic, dampingEffectId, 1);
+            if (dampingEffectId < 0)
+            {
+                // Create the effect if it doesn't exist
+                dampingEffectId = SDL_CreateHapticEffect(haptic, ref effect);
+                if (dampingEffectId < 0) return false;
+                return SDL_RunHapticEffect(haptic, dampingEffectId, 1);
+            }
+            else
+            {
+                // Update the existing effect
+                return SDL_UpdateHapticEffect(haptic, dampingEffectId, ref effect);
+            }
         }
 
         public short CalculateDampingFromSpeed(float speedKmh, string surfaceType = "asphalt")
